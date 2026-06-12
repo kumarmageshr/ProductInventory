@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.*" />
+    <PackageReference Include="MediatR" Version="12.*" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.*" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.*" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.*" />
+    <PackageReference Include="OpenTelemetry" Version="1.*" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.*" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.*" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.*" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.*" />
+    <PackageReference Include="Polly" Version="8.*" />
+    <PackageReference Include="Polly.Extensions.Http" Version="3.*" />
+    <PackageReference Include="Serilog.AspNetCore" Version="8.*" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.*" />
+    <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="4.*" />
+    <PackageReference Include="RabbitMQ.Client" Version="6.*" />
+    <PackageReference Include="Confluent.Kafka" Version="2.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Shared.Domain\Shared.Domain.csproj" />
+    <ProjectReference Include="..\Shared.Contracts\Shared.Contracts.csproj" />
+  </ItemGroup>
+</Project>

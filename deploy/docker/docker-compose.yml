@@ -1,0 +1,256 @@
+version: "3.9"
+
+# ── E-Commerce Platform — Docker Compose ──────────────────────────────────
+# Twelve-Factor: config via environment, dev/prod parity
+
+x-common-env: &common-env
+  ASPNETCORE_ENVIRONMENT: Development
+  OpenTelemetry__Endpoint: http://otel-collector:4317
+  Messaging__Provider: RabbitMQ
+  Messaging__RabbitMQ__HostName: rabbitmq
+  Messaging__RabbitMQ__UserName: guest
+  Messaging__RabbitMQ__Password: guest
+
+x-common-labels: &common-labels
+  app.kubernetes.io/part-of: ecommerce-platform
+
+services:
+  # ── Infrastructure ───────────────────────────────────────────────────────
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "Dev@1234!Strong"
+      MSSQL_PID: Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "Dev@1234!Strong" -Q "SELECT 1"
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    networks:
+      - ecommerce-net
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    networks:
+      - ecommerce-net
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8889:8889"   # Prometheus scrape
+    networks:
+      - ecommerce-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - ecommerce-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - ecommerce-net
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "14268:14268"  # HTTP collector
+    networks:
+      - ecommerce-net
+
+  # ── Microservices ────────────────────────────────────────────────────────
+
+  api-gateway:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      args:
+        SERVICE_NAME: ApiGateway
+        SERVICE_PATH: src/ApiGateway/ApiGateway
+    container_name: api-gateway
+    environment:
+      <<: *common-env
+      Auth__Authority: http://localhost  # Use real Azure AD in production
+      Auth__Audience: api://ecommerce-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - product-service
+      - inventory-service
+      - order-service
+      - payment-service
+      - shipment-service
+    networks:
+      - ecommerce-net
+    restart: unless-stopped
+    labels:
+      <<: *common-labels
+
+  product-service:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      args:
+        SERVICE_NAME: ProductService.API
+        SERVICE_PATH: src/Services/ProductService/ProductService.API
+    container_name: product-service
+    environment:
+      <<: *common-env
+      ConnectionStrings__ProductDb: "Server=sqlserver;Database=ProductDb;User Id=sa;Password=Dev@1234!Strong;TrustServerCertificate=true"
+      Auth__Authority: http://localhost
+      Auth__Audience: api://product-service
+    ports:
+      - "8081:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+    restart: unless-stopped
+    healthcheck:
+      test: wget -qO- http://localhost:8080/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  inventory-service:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      args:
+        SERVICE_NAME: InventoryService.API
+        SERVICE_PATH: src/Services/InventoryService/InventoryService.API
+    container_name: inventory-service
+    environment:
+      <<: *common-env
+      ConnectionStrings__InventoryDb: "Server=sqlserver;Database=InventoryDb;User Id=sa;Password=Dev@1234!Strong;TrustServerCertificate=true"
+    ports:
+      - "8082:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+    restart: unless-stopped
+
+  order-service:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      args:
+        SERVICE_NAME: OrderService.API
+        SERVICE_PATH: src/Services/OrderService/OrderService.API
+    container_name: order-service
+    environment:
+      <<: *common-env
+      ConnectionStrings__OrderDb: "Server=sqlserver;Database=OrderDb;User Id=sa;Password=Dev@1234!Strong;TrustServerCertificate=true"
+    ports:
+      - "8083:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+    restart: unless-stopped
+
+  payment-service:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      args:
+        SERVICE_NAME: PaymentService.API
+        SERVICE_PATH: src/Services/PaymentService/PaymentService.API
+    container_name: payment-service
+    environment:
+      <<: *common-env
+      ConnectionStrings__PaymentDb: "Server=sqlserver;Database=PaymentDb;User Id=sa;Password=Dev@1234!Strong;TrustServerCertificate=true"
+    ports:
+      - "8084:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+    restart: unless-stopped
+
+  shipment-service:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      args:
+        SERVICE_NAME: ShipmentService.API
+        SERVICE_PATH: src/Services/ShipmentService/ShipmentService.API
+    container_name: shipment-service
+    environment:
+      <<: *common-env
+      ConnectionStrings__ShipmentDb: "Server=sqlserver;Database=ShipmentDb;User Id=sa;Password=Dev@1234!Strong;TrustServerCertificate=true"
+    ports:
+      - "8085:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+    restart: unless-stopped
+
+volumes:
+  sqlserver-data:
+  rabbitmq-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  ecommerce-net:
+    driver: bridge

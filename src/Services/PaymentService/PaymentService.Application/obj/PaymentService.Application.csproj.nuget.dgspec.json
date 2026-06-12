@@ -1,0 +1,156 @@
+{
+  "format": 1,
+  "restore": {
+    "f:\\Projects\\ProductInventory\\src\\Services\\PaymentService\\PaymentService.Application\\PaymentService.Application.csproj": {}
+  },
+  "projects": {
+    "f:\\Projects\\ProductInventory\\src\\Services\\PaymentService\\PaymentService.Application\\PaymentService.Application.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "f:\\Projects\\ProductInventory\\src\\Services\\PaymentService\\PaymentService.Application\\PaymentService.Application.csproj",
+        "projectName": "PaymentService.Application",
+        "projectPath": "f:\\Projects\\ProductInventory\\src\\Services\\PaymentService\\PaymentService.Application\\PaymentService.Application.csproj",
+        "packagesPath": "C:\\Users\\kumar\\.nuget\\packages\\",
+        "outputPath": "f:\\Projects\\ProductInventory\\src\\Services\\PaymentService\\PaymentService.Application\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\kumar\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {
+              "f:\\Projects\\ProductInventory\\src\\Services\\PaymentService\\PaymentService.Domain\\PaymentService.Domain.csproj": {
+                "projectPath": "f:\\Projects\\ProductInventory\\src\\Services\\PaymentService\\PaymentService.Domain\\PaymentService.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "dependencies": {
+            "MediatR": {
+              "target": "Package",
+              "version": "[12.*, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.302/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "f:\\Projects\\ProductInventory\\src\\Services\\PaymentService\\PaymentService.Domain\\PaymentService.Domain.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "f:\\Projects\\ProductInventory\\src\\Services\\PaymentService\\PaymentService.Domain\\PaymentService.Domain.csproj",
+        "projectName": "PaymentService.Domain",
+        "projectPath": "f:\\Projects\\ProductInventory\\src\\Services\\PaymentService\\PaymentService.Domain\\PaymentService.Domain.csproj",
+        "packagesPath": "C:\\Users\\kumar\\.nuget\\packages\\",
+        "outputPath": "f:\\Projects\\ProductInventory\\src\\Services\\PaymentService\\PaymentService.Domain\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\kumar\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "dependencies": {
+            "MediatR": {
+              "target": "Package",
+              "version": "[12.*, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.302/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

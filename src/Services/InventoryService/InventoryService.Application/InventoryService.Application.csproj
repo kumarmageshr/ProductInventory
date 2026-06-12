@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MediatR" Version="12.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\InventoryService.Domain\InventoryService.Domain.csproj" />
+    <ProjectReference Include="..\..\..\..\..\src\Shared\Shared.Contracts\Shared.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\..\..\src\Shared\Shared.Infrastructure\Shared.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

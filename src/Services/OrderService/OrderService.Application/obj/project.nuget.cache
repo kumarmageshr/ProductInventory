@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "dgSpecHash": "I3rq6clNBCU=",
+  "success": true,
+  "projectFilePath": "f:\\Projects\\ProductInventory\\src\\Services\\OrderService\\OrderService.Application\\OrderService.Application.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\kumar\\.nuget\\packages\\fluentvalidation\\11.12.0\\fluentvalidation.11.12.0.nupkg.sha512",
+    "C:\\Users\\kumar\\.nuget\\packages\\mediatr\\12.5.0\\mediatr.12.5.0.nupkg.sha512",
+    "C:\\Users\\kumar\\.nuget\\packages\\mediatr.contracts\\2.0.1\\mediatr.contracts.2.0.1.nupkg.sha512",
+    "C:\\Users\\kumar\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.0\\microsoft.extensions.dependencyinjection.abstractions.8.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}

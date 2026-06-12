@@ -1,0 +1,269 @@
+name: "E-Commerce Platform — CI/CD Pipeline"
+
+on:
+  push:
+    branches: [main, release/*, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  DOTNET_VERSION: "9.0.x"
+  REGISTRY: ${{ secrets.AZURE_CONTAINER_REGISTRY }}.azurecr.io
+  AKS_CLUSTER: ecommerce-aks
+  AKS_RESOURCE_GROUP: ecommerce-rg
+  HELM_CHART_PATH: deploy/helm/ecommerce-platform
+
+jobs:
+  # ── Stage 1: Build & Test ─────────────────────────────────────────────────
+  build-and-test:
+    name: "Build & Unit Test"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore ProductInventory.sln
+
+      - name: Build
+        run: |
+          dotnet build ProductInventory.sln \
+            --configuration Release \
+            --no-restore \
+            -p:TreatWarningsAsErrors=true
+
+      - name: Run unit tests
+        run: |
+          dotnet test ProductInventory.sln \
+            --configuration Release \
+            --no-build \
+            --verbosity normal \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./test-results \
+            --filter "Category=Unit" \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: "Unit Tests"
+          path: "test-results/**/*.xml"
+          reporter: dotnet-trx
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: test-results/**/coverage.cobertura.xml
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  # ── Stage 2: Security Scan ────────────────────────────────────────────────
+  security-scan:
+    name: "Security Scan"
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    permissions:
+      security-events: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scan (IaC)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "config"
+          scan-ref: deploy/
+          format: sarif
+          output: trivy-iac.sarif
+          severity: "CRITICAL,HIGH"
+
+      - name: OWASP Dependency-Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: "ECommercePlatform"
+          path: "."
+          format: "SARIF"
+          out: reports
+          args: >
+            --enableRetired
+            --failOnCVSS 7
+
+      - name: Upload security SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-iac.sarif
+
+  # ── Stage 3: Docker Build & Push ─────────────────────────────────────────
+  docker-build-push:
+    name: "Docker Build & Push — ${{ matrix.service.name }}"
+    runs-on: ubuntu-latest
+    needs: security-scan
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
+    permissions:
+      contents: read
+      id-token: write   # Azure OIDC
+
+    strategy:
+      matrix:
+        service:
+          - name: api-gateway
+            path: src/ApiGateway/ApiGateway
+            build-arg: ApiGateway
+          - name: product-service
+            path: src/Services/ProductService/ProductService.API
+            build-arg: ProductService.API
+          - name: inventory-service
+            path: src/Services/InventoryService/InventoryService.API
+            build-arg: InventoryService.API
+          - name: order-service
+            path: src/Services/OrderService/OrderService.API
+            build-arg: OrderService.API
+          - name: payment-service
+            path: src/Services/PaymentService/PaymentService.API
+            build-arg: PaymentService.API
+          - name: shipment-service
+            path: src/Services/ShipmentService/ShipmentService.API
+            build-arg: ShipmentService.API
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC — no stored credentials)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to Azure Container Registry
+        run: az acr login --name ${{ secrets.AZURE_CONTAINER_REGISTRY }}
+
+      - name: Set image tag
+        id: tag
+        run: |
+          SHA_SHORT=$(git rev-parse --short HEAD)
+          echo "TAG=${SHA_SHORT}" >> $GITHUB_OUTPUT
+          echo "IMAGE=${{ env.REGISTRY }}/${{ matrix.service.name }}:${SHA_SHORT}" >> $GITHUB_OUTPUT
+          echo "IMAGE_LATEST=${{ env.REGISTRY }}/${{ matrix.service.name }}:latest" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: deploy/docker/Dockerfile
+          push: true
+          build-args: |
+            SERVICE_NAME=${{ matrix.service.build-arg }}
+            SERVICE_PATH=${{ matrix.service.path }}
+          tags: |
+            ${{ steps.tag.outputs.IMAGE }}
+            ${{ steps.tag.outputs.IMAGE_LATEST }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ matrix.service.name }}:cache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ matrix.service.name }}:cache,mode=max
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.repositoryUrl }}
+
+      - name: Scan pushed image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.tag.outputs.IMAGE }}
+          format: sarif
+          output: trivy-image.sarif
+          severity: "CRITICAL"
+          exit-code: "1"
+
+  # ── Stage 4: Deploy to AKS ────────────────────────────────────────────────
+  deploy:
+    name: "Deploy to AKS"
+    runs-on: ubuntu-latest
+    needs: docker-build-push
+    environment:
+      name: production
+      url: https://api.ecommerce.example.com
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ env.AKS_RESOURCE_GROUP }} \
+            --name ${{ env.AKS_CLUSTER }} \
+            --overwrite-existing
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install ecommerce-platform ${{ env.HELM_CHART_PATH }} \
+            --namespace ecommerce \
+            --create-namespace \
+            --set global.imageTag=$(git rev-parse --short HEAD) \
+            --set global.imageRegistry=${{ env.REGISTRY }} \
+            --values deploy/helm/ecommerce-platform/values.yaml \
+            --wait \
+            --timeout 10m \
+            --atomic
+
+  # ── Stage 5: Smoke Tests ──────────────────────────────────────────────────
+  smoke-test:
+    name: "Smoke Tests"
+    runs-on: ubuntu-latest
+    needs: deploy
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run smoke tests
+        run: |
+          BASE_URL="https://api.ecommerce.example.com"
+
+          echo "Testing API Gateway health..."
+          curl -f -s "${BASE_URL}/health" | grep -q "Healthy" || exit 1
+
+          echo "Testing Product Catalog endpoint..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${BASE_URL}/api/v1/products")
+          [ "$STATUS" = "200" ] || exit 1
+
+          echo "All smoke tests passed!"
+
+      - name: Notify on failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: "Smoke tests failed after deployment. Check ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

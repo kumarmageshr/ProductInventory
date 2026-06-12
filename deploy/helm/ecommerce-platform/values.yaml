@@ -1,0 +1,129 @@
+# Global values
+global:
+  imageRegistry: "ecommerceacr.azurecr.io"
+  imageTag: "latest"
+  imagePullPolicy: "Always"
+  environment: "production"
+
+# ── API Gateway ─────────────────────────────────────────────────────────────
+apiGateway:
+  enabled: true
+  replicaCount: 2
+  image:
+    name: api-gateway
+  service:
+    type: LoadBalancer
+    port: 80
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+# ── Product Service ──────────────────────────────────────────────────────────
+productService:
+  enabled: true
+  replicaCount: 2
+  image:
+    name: product-service
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+# ── Inventory Service ─────────────────────────────────────────────────────────
+inventoryService:
+  enabled: true
+  replicaCount: 2
+  image:
+    name: inventory-service
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+# ── Order Service ─────────────────────────────────────────────────────────────
+orderService:
+  enabled: true
+  replicaCount: 2
+  image:
+    name: order-service
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+# ── Payment Service ──────────────────────────────────────────────────────────
+paymentService:
+  enabled: true
+  replicaCount: 2
+  image:
+    name: payment-service
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# ── Shipment Service ─────────────────────────────────────────────────────────
+shipmentService:
+  enabled: true
+  replicaCount: 2
+  image:
+    name: shipment-service
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# ── Shared Configuration ─────────────────────────────────────────────────────
+config:
+  messagingProvider: "AzureServiceBus"
+  otelEndpoint: "http://otel-collector:4317"
+  authAuthority: "https://login.microsoftonline.com/TENANT_ID/v2.0"
+
+# ── Monitoring ───────────────────────────────────────────────────────────────
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+  grafana:
+    enabled: true
+    adminPassword: "CHANGE_ME"

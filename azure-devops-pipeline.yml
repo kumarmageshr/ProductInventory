@@ -1,0 +1,226 @@
+trigger:
+  branches:
+    include:
+      - main
+      - release/*
+      - develop
+  paths:
+    include:
+      - src/**
+      - deploy/**
+      - "*.sln"
+
+variables:
+  - group: ecommerce-secrets
+  - name: dotnetVersion
+    value: "9.0.x"
+  - name: buildConfiguration
+    value: "Release"
+  - name: imageRegistry
+    value: "$(AZURE_CONTAINER_REGISTRY).azurecr.io"
+  - name: helmChartPath
+    value: "deploy/helm/ecommerce-platform"
+
+stages:
+  # ── Stage 1: Build & Test ─────────────────────────────────────────────────
+  - stage: BuildAndTest
+    displayName: "Build & Test"
+    jobs:
+      - job: BuildTest
+        displayName: "Build, Test & Analyze"
+        pool:
+          vmImage: "ubuntu-latest"
+        steps:
+          - task: UseDotNet@2
+            displayName: "Install .NET SDK"
+            inputs:
+              version: $(dotnetVersion)
+
+          - task: DotNetCoreCLI@2
+            displayName: "Restore"
+            inputs:
+              command: restore
+              projects: "**/*.sln"
+
+          - task: DotNetCoreCLI@2
+            displayName: "Build"
+            inputs:
+              command: build
+              projects: "**/*.sln"
+              arguments: "--configuration $(buildConfiguration) --no-restore -p:TreatWarningsAsErrors=true"
+
+          - task: DotNetCoreCLI@2
+            displayName: "Unit Tests"
+            inputs:
+              command: test
+              projects: "tests/**/*UnitTests*.csproj"
+              arguments: >
+                --configuration $(buildConfiguration)
+                --no-build
+                --collect:"XPlat Code Coverage"
+                --results-directory $(Agent.TempDirectory)/test-results
+                --filter "Category=Unit"
+              publishTestResults: true
+
+          - task: PublishCodeCoverageResults@2
+            displayName: "Publish Code Coverage"
+            inputs:
+              summaryFileLocation: "$(Agent.TempDirectory)/test-results/**/coverage.cobertura.xml"
+              reportDirectory: "$(Agent.TempDirectory)/coverage-report"
+              codecoverageTool: Cobertura
+
+          - task: DotNetCoreCLI@2
+            displayName: "Integration Tests"
+            inputs:
+              command: test
+              projects: "tests/**/*IntegrationTests*.csproj"
+              arguments: >
+                --configuration $(buildConfiguration)
+                --no-build
+                --filter "Category=Integration"
+            env:
+              INTEGRATION_TEST_CONNECTION: $(INTEGRATION_DB_CONNECTION)
+
+  # ── Stage 2: Security Scan ────────────────────────────────────────────────
+  - stage: SecurityScan
+    displayName: "Security Scan"
+    dependsOn: BuildAndTest
+    jobs:
+      - job: SecurityAnalysis
+        displayName: "OWASP & Container Scan"
+        pool:
+          vmImage: "ubuntu-latest"
+        steps:
+          - task: dependency-check-build-task@6
+            displayName: "OWASP Dependency Check"
+            inputs:
+              projectName: "ECommercePlatform"
+              scanPath: "src"
+              format: "JUNIT"
+              failOnCVSS: "7"
+
+          - task: PublishTestResults@2
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: "**/dependency-check-junit.xml"
+
+  # ── Stage 3: Docker Build ─────────────────────────────────────────────────
+  - stage: DockerBuild
+    displayName: "Docker Build & Push"
+    dependsOn: SecurityScan
+    condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')))
+    jobs:
+      - job: DockerBuildPush
+        displayName: "Build Docker Images"
+        pool:
+          vmImage: "ubuntu-latest"
+        strategy:
+          matrix:
+            ApiGateway:
+              serviceName: "api-gateway"
+              serviceArg: "ApiGateway"
+              servicePath: "src/ApiGateway/ApiGateway"
+            ProductService:
+              serviceName: "product-service"
+              serviceArg: "ProductService.API"
+              servicePath: "src/Services/ProductService/ProductService.API"
+            InventoryService:
+              serviceName: "inventory-service"
+              serviceArg: "InventoryService.API"
+              servicePath: "src/Services/InventoryService/InventoryService.API"
+            OrderService:
+              serviceName: "order-service"
+              serviceArg: "OrderService.API"
+              servicePath: "src/Services/OrderService/OrderService.API"
+            PaymentService:
+              serviceName: "payment-service"
+              serviceArg: "PaymentService.API"
+              servicePath: "src/Services/PaymentService/PaymentService.API"
+            ShipmentService:
+              serviceName: "shipment-service"
+              serviceArg: "ShipmentService.API"
+              servicePath: "src/Services/ShipmentService/ShipmentService.API"
+        steps:
+          - task: AzureCLI@2
+            displayName: "ACR Login"
+            inputs:
+              azureSubscription: "$(AZURE_SERVICE_CONNECTION)"
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: az acr login --name $(AZURE_CONTAINER_REGISTRY)
+
+          - task: Docker@2
+            displayName: "Build & Push $(serviceName)"
+            inputs:
+              command: buildAndPush
+              containerRegistry: "$(AZURE_CONTAINER_REGISTRY)"
+              repository: "$(serviceName)"
+              dockerfile: "deploy/docker/Dockerfile"
+              buildContext: "."
+              arguments: >
+                --build-arg SERVICE_NAME=$(serviceArg)
+                --build-arg SERVICE_PATH=$(servicePath)
+              tags: |
+                $(Build.SourceVersion)
+                latest
+
+  # ── Stage 4: Deploy Production ────────────────────────────────────────────
+  - stage: DeployProduction
+    displayName: "Deploy to AKS Production"
+    dependsOn: DockerBuild
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: DeployAKS
+        displayName: "Helm Deploy"
+        environment: production
+        pool:
+          vmImage: "ubuntu-latest"
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureCLI@2
+                  displayName: "Get AKS Credentials"
+                  inputs:
+                    azureSubscription: "$(AZURE_SERVICE_CONNECTION)"
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      az aks get-credentials \
+                        --resource-group $(AKS_RESOURCE_GROUP) \
+                        --name $(AKS_CLUSTER) \
+                        --overwrite-existing
+
+                - task: HelmDeploy@0
+                  displayName: "Helm Upgrade"
+                  inputs:
+                    command: upgrade
+                    chartType: FilePath
+                    chartPath: $(helmChartPath)
+                    releaseName: ecommerce-platform
+                    namespace: ecommerce
+                    install: true
+                    waitForExecution: true
+                    arguments: >
+                      --set global.imageTag=$(Build.SourceVersion)
+                      --set global.imageRegistry=$(imageRegistry)
+                      --timeout 10m
+                      --atomic
+
+  # ── Stage 5: Smoke Test ───────────────────────────────────────────────────
+  - stage: SmokeTest
+    displayName: "Smoke Tests"
+    dependsOn: DeployProduction
+    jobs:
+      - job: SmokeTests
+        pool:
+          vmImage: "ubuntu-latest"
+        steps:
+          - bash: |
+              BASE="https://api.ecommerce.example.com"
+              echo "Gateway health..."
+              curl -f "$BASE/health"
+              echo "Product catalog..."
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/v1/products")
+              [ "$STATUS" = "200" ] && echo "PASS" || exit 1
+            displayName: "Run Smoke Tests"
