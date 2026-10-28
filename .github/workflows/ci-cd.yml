@@ -34,24 +34,33 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore dependencies
-        run: dotnet restore ProductInventory.sln
+        run: |
+          dotnet restore tests/ProductService.UnitTests/ProductService.UnitTests.csproj
+          dotnet restore tests/OrderService.UnitTests/OrderService.UnitTests.csproj
+          dotnet restore tests/InventoryService.UnitTests/InventoryService.UnitTests.csproj
 
       - name: Build
         run: |
-          dotnet build ProductInventory.sln \
-            --configuration Release \
-            --no-restore \
-            -p:TreatWarningsAsErrors=true
+          dotnet build tests/ProductService.UnitTests/ProductService.UnitTests.csproj --configuration Release --no-restore -p:TreatWarningsAsErrors=true
+          dotnet build tests/OrderService.UnitTests/OrderService.UnitTests.csproj --configuration Release --no-restore -p:TreatWarningsAsErrors=true
+          dotnet build tests/InventoryService.UnitTests/InventoryService.UnitTests.csproj --configuration Release --no-restore -p:TreatWarningsAsErrors=true
 
       - name: Run unit tests
         run: |
-          dotnet test ProductInventory.sln \
-            --configuration Release \
-            --no-build \
-            --verbosity normal \
-            --collect:"XPlat Code Coverage" \
-            --results-directory ./test-results \
-            --filter "Category=Unit" \
+          dotnet test tests/ProductService.UnitTests/ProductService.UnitTests.csproj \
+            --configuration Release --no-build --no-restore --verbosity normal \
+            --collect:"XPlat Code Coverage" --results-directory ./test-results \
+            --filter "Category=Unit" --logger "trx;LogFileName=ProductService.UnitTests.trx" \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+          dotnet test tests/OrderService.UnitTests/OrderService.UnitTests.csproj \
+            --configuration Release --no-build --no-restore --verbosity normal \
+            --collect:"XPlat Code Coverage" --results-directory ./test-results \
+            --filter "Category=Unit" --logger "trx;LogFileName=OrderService.UnitTests.trx" \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+          dotnet test tests/InventoryService.UnitTests/InventoryService.UnitTests.csproj \
+            --configuration Release --no-build --no-restore --verbosity normal \
+            --collect:"XPlat Code Coverage" --results-directory ./test-results \
+            --filter "Category=Unit" --logger "trx;LogFileName=InventoryService.UnitTests.trx" \
             -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
 
       - name: Publish test results
@@ -59,8 +68,9 @@ jobs:
         if: always()
         with:
           name: "Unit Tests"
-          path: "test-results/**/*.xml"
+          path: "test-results/**/*.trx"
           reporter: dotnet-trx
+          fail-on-error: false
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

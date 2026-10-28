@@ -21,9 +21,11 @@ build/
 
 # Test results and coverage
 TestResults/
+/test-results/
 *.trx
 *.coverage
 *.coveragexml
+coverage.cobertura.xml
 *.psess
 *.vsp
 *.vspx
