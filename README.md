@@ -1,37 +1,51 @@
-# E-Commerce Platform — Production-Ready Microservices
+# E-Commerce Platform — Reference Microservices Architecture
 
-> A cloud-native, production-grade e-commerce backend built with **.NET 9**, **Clean Architecture**, **Domain-Driven Design (DDD)**, **CQRS**, and an **Event-Driven Saga** orchestration pattern. Designed as a reference architecture for teams building scalable microservices.
+> A cloud-native e-commerce backend built with **.NET 9**, **Clean Architecture**, **Domain-Driven Design (DDD)**, **CQRS**, and an **event-driven orchestration model**. This repository is structured as a reference implementation for teams exploring scalable microservice patterns and pragmatic enterprise architecture.
 
 [![.NET 9](https://img.shields.io/badge/.NET-9.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](azure-devops-pipeline.yml)
+[![Status](https://img.shields.io/badge/status-reference%20architecture-orange)](README.md)
+
+## Implementation Status
+
+This repository is best understood as a working reference architecture with a validated core implementation for the Product domain, supporting shared infrastructure, and deployment scaffolding for a larger distributed platform.
+
+### Current maturity
+- Implemented and tested: Product domain + application layer + unit tests
+- Included as scaffolding: shared infrastructure, API gateway, Docker/Kubernetes/Helm deployment files
+- Planned/extension areas: full multi-service business flows, production hardening, security policy, service-level operational automation
+
+This documentation intentionally describes the platform’s target design and the patterns the project is structured around, while keeping the implementation status honest.
 
 ---
 
 ## Table of Contents
 
 1. [Architecture Overview](#architecture-overview)
-2. [Technology Stack](#technology-stack)
-3. [Project Structure](#project-structure)
-4. [Prerequisites](#prerequisites)
-5. [Quick Start — Docker Compose](#quick-start--docker-compose)
-6. [Running Locally (Without Docker)](#running-locally-without-docker)
-7. [Configuration Reference](#configuration-reference)
-8. [Messaging Configuration](#messaging-configuration)
-9. [Running Tests](#running-tests)
-10. [Kubernetes Deployment](#kubernetes-deployment)
-11. [Helm Deployment](#helm-deployment)
-12. [CI/CD — Azure DevOps Pipeline](#cicd--azure-devops-pipeline)
-13. [Observability](#observability)
-14. [Security Model](#security-model)
-15. [API Reference](#api-reference)
-16. [Architecture Decisions (ADRs)](#architecture-decisions-adrs)
-17. [Contributing](#contributing)
-18. [License](#license)
+2. [Implementation Status](#implementation-status)
+3. [Technology Stack](#technology-stack)
+4. [Project Structure](#project-structure)
+5. [Prerequisites](#prerequisites)
+6. [Quick Start — Docker Compose](#quick-start--docker-compose)
+7. [Running Locally (Without Docker)](#running-locally-without-docker)
+8. [Configuration Reference](#configuration-reference)
+9. [Messaging Configuration](#messaging-configuration)
+10. [Running Tests](#running-tests)
+11. [Kubernetes Deployment](#kubernetes-deployment)
+12. [Helm Deployment](#helm-deployment)
+13. [CI/CD — Azure DevOps Pipeline](#cicd--azure-devops-pipeline)
+14. [Observability](#observability)
+15. [Security Model](#security-model)
+16. [API Reference](#api-reference)
+17. [Architecture Decisions (ADRs)](#architecture-decisions-adrs)
+18. [Contributing](#contributing)
+19. [License](#license)
 
 ---
 
 ## Architecture Overview
+
+This section describes the target platform design and the patterns the codebase is organized around. It does not imply every service or operational capability is fully implemented across the repository today.
 
 ```mermaid
 graph TB

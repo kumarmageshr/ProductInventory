@@ -1,0 +1,61 @@
+# Build artifacts
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+build/
+[Bb]uild/
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+*.pdb
+*.dbmdl
+*.bak
+*.orig
+
+# Test results and coverage
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+*.psess
+*.vsp
+*.vspx
+*.sap
+
+# Local tooling / environment
+.env
+.env.*
+*.log
+*.tmp
+*.temp
+*.pid
+*.lock
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# NuGet restore cache
+packages/
+project.lock.json
+
+# Publish output
+publish/
+**/publish/
+
+# IDE / editor files
+.idea/
+*.swp
+*.swo
+
+# Local data files
+*.db
+*.sqlite
+*.sqlite3

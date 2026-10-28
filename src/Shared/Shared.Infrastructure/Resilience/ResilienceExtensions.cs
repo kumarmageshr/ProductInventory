@@ -19,7 +19,7 @@ public static class ResilienceExtensions
     public static IHttpClientBuilder AddECommerceResiliencePolicy(
         this IHttpClientBuilder builder)
     {
-        return builder.AddResilienceHandler("ecommerce-resilience", pipeline =>
+        builder.AddResilienceHandler("ecommerce-resilience", pipeline =>
         {
             // Timeout — innermost (per-attempt)
             pipeline.AddTimeout(new HttpTimeoutStrategyOptions
@@ -56,6 +56,8 @@ public static class ResilienceExtensions
                 Name = "TotalTimeout"
             });
         });
+
+        return builder;
     }
 
     /// <summary>

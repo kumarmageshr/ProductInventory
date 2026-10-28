@@ -1,4 +1,5 @@
 using MediatR;
+using ProductService.Domain.Products;
 using Shared.Domain.Primitives;
 
 namespace ProductService.Application.Products.Commands.UpdateProductPrice;
