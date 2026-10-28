@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.4.xsd"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.4.xsd https://dependency-check.github.io/DependencyCheck/dependency-suppression.1.4.xsd">
+  <suppress>
+    <notes><![CDATA[
+      False positive CPE matches: CVE-2004-0455 affects the www-sql CGI application,
+      not these NuGet packages. Keep this limited to the exact package names and CVE.
+    ]]></notes>
+    <packageUrl regex="true">^pkg:nuget/(aspnetcore\.healthchecks\.sqlserver|microsoft\.entityframeworkcore\.sqlserver|testcontainers\.mssql)@.*$</packageUrl>
+    <cve>CVE-2004-0455</cve>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+      False positive CPE match: CVE-2025-45770 applies to jwt v5.4.3, not
+      Microsoft.AspNetCore.Authentication.JwtBearer.
+    ]]></notes>
+    <packageUrl regex="true">^pkg:nuget/microsoft\.aspnetcore\.authentication\.jwtbearer@.*$</packageUrl>
+    <cve>CVE-2025-45770</cve>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+      False positive CPE match: CVE-2009-0280 affects ASP Project Management 1.0,
+      not OpenTelemetry ASP.NET Core instrumentation.
+    ]]></notes>
+    <packageUrl regex="true">^pkg:nuget/opentelemetry\.instrumentation\.aspnetcore@.*$</packageUrl>
+    <cve>CVE-2009-0280</cve>
+  </suppress>
+</suppressions>

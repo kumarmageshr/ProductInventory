@@ -34,10 +34,17 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore dependencies
+        run: dotnet restore ProductInventory.sln
+
+      - name: Audit NuGet dependencies
+        shell: bash
         run: |
-          dotnet restore tests/ProductService.UnitTests/ProductService.UnitTests.csproj
-          dotnet restore tests/OrderService.UnitTests/OrderService.UnitTests.csproj
-          dotnet restore tests/InventoryService.UnitTests/InventoryService.UnitTests.csproj
+          report="$(dotnet list ProductInventory.sln package --vulnerable --include-transitive)"
+          printf '%s\n' "$report"
+          if printf '%s\n' "$report" | grep -Eq '^[[:space:]]*>[[:space:]]+[^[:space:]]+[[:space:]]+[^[:space:]]+[[:space:]]+(Critical|High|Moderate|Low)[[:space:]]'; then
+            echo "::error::Vulnerable NuGet packages were found."
+            exit 1
+          fi
 
       - name: Build
         run: |
@@ -110,6 +117,7 @@ jobs:
           out: reports
           args: >
             --enableRetired
+            --suppression .github/dependency-check-suppressions.xml
             --failOnCVSS 7
 
       - name: Upload security SARIF
