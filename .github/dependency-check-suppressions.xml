@@ -26,4 +26,12 @@
     <packageUrl regex="true">^pkg:nuget/opentelemetry\.instrumentation\.aspnetcore@.*$</packageUrl>
     <cve>CVE-2009-0280</cve>
   </suppress>
+  <suppress>
+    <notes><![CDATA[
+      False positive CPE match: CVE-2026-39883 affects OpenTelemetry-Go, not
+      OpenTelemetry.Exporter.Prometheus.AspNetCore for .NET.
+    ]]></notes>
+    <packageUrl regex="true">^pkg:nuget/opentelemetry\.exporter\.prometheus\.aspnetcore@.*$</packageUrl>
+    <cve>CVE-2026-39883</cve>
+  </suppress>
 </suppressions>
